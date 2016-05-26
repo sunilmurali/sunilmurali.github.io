@@ -1,0 +1,170 @@
+<html>
+<head>
+<title>Add Namespace</title>
+<script src="https://code.jquery.com/jquery-1.12.1.min.js"></script>
+<script type="text/javascript" src="jquery-1.12.1.min.js"></script>
+<script>
+
+
+var arrCustomEnds = ['__c', '__C', '__r', '__R'];
+//var arrCustomEnds = ['__c'];
+
+function validateNS(ns) {
+	if (ns.length == 0) {
+		alert('Enter Namespace');
+		return;
+	}
+	if (ns.length == 0) {
+		alert('Enter Namespace');
+		return;
+	}	
+	if (ns.length == 1) {
+		ns += '__';
+
+	}	
+	if (ns.substring(ns.length-2) != '__') {
+		ns += '__';
+	}
+	return ns;
+}
+
+function isFieldSafeChar(ch) {
+	var isSafe = true;
+	var code = ch.charCodeAt(0);
+    if (!(code == 95) &&	        // underscore (_)
+        !(code > 47 && code < 58) &&  // numeric (0-9)
+        !(code > 64 && code < 91) &&  // upper alpha (A-Z)
+        !(code > 96 && code < 123)) { // lower alpha (a-z)
+      isSafe = false;
+    }
+    //console.log('safe: *' + ch + '* ' + isSafe);
+	return isSafe;
+}
+
+function addNS() {
+	//get the ns
+	var ns = $('input#ns').val().trim();
+	ns = validateNS(ns);
+
+	var inTA = $('textarea#inTA').val();	
+
+	
+	//loop through our custom field / rel endings like __c, __r
+	for (var e=0; e<arrCustomEnds.length; e++) {
+		var ce = arrCustomEnds[e];
+		var arrCustomTokens = inTA.split(ce);
+
+		//break up the input into an array of all the custom endings like __c, __r
+		if (arrCustomTokens.length > 1) {
+			var inTAns = '';
+
+			for (var t=0; t<arrCustomTokens.length; t++) {
+				var lastLoop = false;
+				if (t == arrCustomTokens.length-1) {
+					lastLoop = true;
+				}
+
+				var ct = arrCustomTokens[t];
+ 				console.log('END: ' + ce + ', Token: ' + ct);
+
+ 				if (lastLoop) {
+ 					//since we split on the __c, we take care of the namespacing before the split.  the very last
+ 					//loop will have nothing to correct
+ 					inTAns += ct;
+ 				} else {
+ 					//get the first char of the next array location.  this is to handle strings like this:
+ 					//NS__Report__c
+ 					//when we split on __R it will grab the front part by mistake.
+ 					//we want to test that char after it to see if it is field safe or not.  in this case, the "e" in NS__Report
+ 					//if it is field safe, that means we want to ignore this split
+ 					
+ 					var nextToken = arrCustomTokens[t+1];
+ 					var nextTokenCharFieldSafe = false;
+ 					if (nextToken.length > 0) {
+ 						var firstCharNextToken = nextToken[0];
+ 						var nextTokenCharFieldSafe = isFieldSafeChar(firstCharNextToken);
+ 					}
+
+ 					if (nextTokenCharFieldSafe) {
+ 						inTAns += ct + ce;
+ 						continue;
+ 					}
+
+
+	 				var revStr = '';
+	 				var unsafeCount = 0;
+
+	 				//loop backwards up the token until we find a character which isn't alphanumeric or underscore
+	 				for (var b=ct.length-1; b>=0; b--) {
+	 					var ch = ct[b];
+						
+						var isFieldSafe = isFieldSafeChar(ch); 
+
+	 					if (!isFieldSafe) {
+	 						unsafeCount ++;	
+	 					}
+
+						if ((!isFieldSafe) && (unsafeCount == 1)) {
+							//we backed into a non-safe field char. Our field has terminated.  time to inject NS and ending 
+
+							//add the custom end back onto it, since it was split out
+							revStr += ce;
+
+							//add the namespace onto the front of it
+							revStr = ns + revStr;
+
+							//add the non-field char on front of the NS
+							revStr = ch + revStr;
+
+							//console.log('Field: ' + sField);
+						} else {
+							revStr = ch + revStr;
+						}
+	 					//console.log(ch + '*');
+	 				}
+	 				console.log(revStr);
+	 				inTAns += revStr;
+ 				}
+
+			}
+			inTA = inTAns;
+		}
+	}		
+
+
+	$('textarea#outTA').val(inTA);
+}
+
+$(document).ready(function() {
+	$("#robobutton").click(function() {
+		addNS();
+	});
+
+	$("#example").click(function() {
+		var ex = 'Put example here.';
+
+		$('textarea#inTA').val(ex);
+	});	
+
+
+});
+
+
+
+</script>
+</head>
+
+<body>
+Namespace to add: <input type="text" name="ns" id="ns" size="10"> &nbsp;&nbsp;&nbsp;<button type="button" id="robobutton">Add Namespace</button>
+<br/>
+<br/>
+Input <a href="#" id="example">(Click for Example)</a><br/>
+<textarea id="inTA" rows="25" cols="200"></textarea>
+<br/>
+
+<br/>
+Output<br/>
+<textarea id="outTA" rows="25" cols="200"></textarea>
+
+</body>
+</html>
